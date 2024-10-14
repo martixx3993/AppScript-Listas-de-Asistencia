@@ -1,0 +1,98 @@
+Funcion para el encio de mensajes automaticos
+function checkFaltas() {
+  // Obtiene la hoja de cálculo completa
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = spreadsheet.getSheets(); // Obtiene todas las hojas
+  var sheetUrl = spreadsheet.getUrl();  // Enlace a la hoja de cálculo
+
+  // Variable para acumular los mensajes de alerta
+  var reportMessage = "";
+
+  // Recorre cada hoja del libro de cálculo
+  for (var s = 0; s < sheets.length; s++) {
+    var sheet = sheets[s];
+    
+    // Obtiene el nombre de la materia en la celda B3 de cada hoja
+    var subjectName = sheet.getRange(3, 2).getValue();
+    
+    // Obtiene el número de filas de la hoja actual
+    var numRows = sheet.getLastRow();
+    
+    // Recorre cada fila para revisar la columna de Faltas (columna 80)
+    for (var i = 1; i <= numRows; i++) {
+      var cellValue = sheet.getRange(i, 80).getValue(); // Valor en la columna 80 (faltas)
+      
+      // Si el valor de la celda es mayor o igual a 4
+      if (cellValue >= 4) {
+        // Obtiene el nombre del estudiante (columna 4 de la misma fila)
+        var studentName = sheet.getRange(i, 4).getValue();
+        
+        // Crea el mensaje de alerta para este estudiante
+        var message = "Alerta: El estudiante " + studentName + 
+                      " ya tiene varias faltas en la materia " + subjectName + ".\n";
+        message += "Puedes revisar la hoja de cálculo en el siguiente enlace: " + sheetUrl + "\n\n";
+        
+        // Añade este mensaje al reporte general
+        reportMessage += message;
+      }
+    }
+  }
+  
+  // Si hay alertas, se envía el correo a los destinatarios que se desee
+  if (reportMessage != "") {
+    // Correos a los que se enviará el mensaje
+    var recipients = "comunicacioninterna.ch@tecba.edu.bo,marduan01@gmail.com";
+    
+    MailApp.sendEmail({
+      to: recipients,  // Destinatarios separados por coma
+      subject: "Reporte de Faltas", 
+      body: reportMessage
+    });
+  }
+}
+
+Funcion para ocultar el contenido de las hojas
+function hideRows() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet(); // Se ocultan las filas en la hoja activa
+
+  if (sheet) {
+    // Ocultar las filas 9 a 55
+    sheet.hideRows(9, 47); // 47 es la cantidad de filas desde la 9 hasta la 55 (55 - 9 + 1)
+  }
+}
+
+Funcion para mostrar el contenido de las hojas
+// Función para proteger la hoja y permitir la edición a cinco personas específicas
+function protectSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet(); // Se protege la hoja activa
+  
+  // Protege la hoja
+  const protection = sheet.protect().setDescription('Protección de hoja');
+  
+  // Obtiene los correos electrónicos de las celdas A1 a A5
+  const emails = [];
+  const emailRange = sheet.getRange('CI2:CI6'); // Rango donde están los correos
+  const emailValues = emailRange.getValues();
+  
+  // Agrega los correos a la lista
+  emailValues.forEach(row => {
+    const email = row[0].trim();
+    if (email) {
+      emails.push(email);
+    }
+  });
+
+  // Permitir la edición solo a las personas en la lista de correos
+  protection.addEditors(emails);
+  
+  // También puedes añadirte como editor si lo deseas
+  protection.addEditor(Session.getEffectiveUser().getEmail());
+
+  // Establece la protección para que no se pueda quitar sin permiso
+  protection.setWarningOnly(false);
+  
+  // Mensaje de confirmación
+  Logger.log('La hoja ha sido protegida y los editores han sido establecidos.');
+}
